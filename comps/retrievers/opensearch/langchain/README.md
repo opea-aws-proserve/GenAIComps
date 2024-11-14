@@ -58,6 +58,7 @@ export OPENSEARCH_URL="http://${your_ip}:9200"
 export INDEX_NAME=${your_index_name}
 export TEI_EMBEDDING_ENDPOINT="http://${your_ip}:6060"
 export HUGGINGFACEHUB_API_TOKEN=${your_hf_token}
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD=${your_opensearch_initial_admin_password}
 ```
 
 ### 2.2 Build Docker Image

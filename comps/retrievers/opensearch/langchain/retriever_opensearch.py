@@ -50,8 +50,11 @@ async def retrieve(
     start = time.time()
 
     # Check if the index exists and has documents
+    doc_count = 0
+
     index_exists = vector_db.client.indices.exists(index=INDEX_NAME)
-    doc_count = vector_db.client.count(index=INDEX_NAME)['count']
+    if index_exists:
+        doc_count = vector_db.client.count(index=INDEX_NAME)['count']
     if (not index_exists) or doc_count == 0:
         search_res = []
     else:
@@ -117,7 +120,11 @@ if __name__ == "__main__":
         opensearch_url=OPENSEARCH_URL,
         index_name=INDEX_NAME,
         embedding_function=embeddings,
-        http_auth=auth
+        http_auth=auth,
+        use_ssl=True,
+        verify_certs=False,
+        ssl_assert_hostname=False,
+        ssl_show_warn=False
     )
     opea_microservices["opea_service@retriever_opensearch"].start()
 

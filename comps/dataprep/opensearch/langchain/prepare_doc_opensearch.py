@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 
 # from pyspark import SparkConf, SparkContext
 from opensearchpy import OpenSearch, helpers
-from config import EMBED_MODEL, INDEX_NAME, KEY_INDEX_NAME, OPENSEARCH_URL, SEARCH_BATCH_SIZE
+from config import EMBED_MODEL, INDEX_NAME, KEY_INDEX_NAME, OPENSEARCH_URL, OPENSEARCH_INITIAL_ADMIN_PASSWORD, SEARCH_BATCH_SIZE
 from fastapi import Body, File, Form, HTTPException, UploadFile
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
@@ -42,10 +42,16 @@ if tei_embedding_endpoint:
 else:
     # create embeddings using local embedding model
     embeddings = HuggingFaceBgeEmbeddings(model_name=EMBED_MODEL)
+auth = ('admin', OPENSEARCH_INITIAL_ADMIN_PASSWORD)
 opensearch_client = OpenSearchVectorSearch(
     opensearch_url=OPENSEARCH_URL,
     index_name=INDEX_NAME,
-    embedding_function=embeddings
+    embedding_function=embeddings,
+    http_auth=auth,
+    use_ssl=True,
+    verify_certs=False,
+    ssl_assert_hostname=False,
+    ssl_show_warn=False
 )
 
 
