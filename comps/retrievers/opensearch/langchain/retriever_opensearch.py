@@ -8,7 +8,7 @@ from typing import Union
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from opensearch_config import EMBED_MODEL, INDEX_NAME, OPENSEARCH_URL
+from opensearch_config import EMBED_MODEL, INDEX_NAME, OPENSEARCH_URL, OPENSEARCH_INITIAL_ADMIN_PASSWORD
 
 from comps import (
     CustomLogger,
@@ -112,10 +112,12 @@ if __name__ == "__main__":
         # create embeddings using local embedding model
         embeddings = HuggingFaceBgeEmbeddings(model_name=EMBED_MODEL)
     
+    auth = ('admin', OPENSEARCH_INITIAL_ADMIN_PASSWORD)
     vector_db = OpenSearchVectorSearch(
         opensearch_url=OPENSEARCH_URL,
         index_name=INDEX_NAME,
-        embedding_function=embeddings
+        embedding_function=embeddings,
+        http_auth=auth
     )
     opea_microservices["opea_service@retriever_opensearch"].start()
 

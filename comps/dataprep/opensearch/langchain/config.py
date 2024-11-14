@@ -3,6 +3,14 @@
 
 import os
 
+# Embedding model
+
+EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-base-en-v1.5")
+
+# OpenSearch Connection Information
+OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
+OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", 9200))
+
 
 def get_boolean_env_var(var_name, default_value=False):
     """Retrieve the boolean value of an environment variable.
@@ -30,25 +38,6 @@ def get_boolean_env_var(var_name, default_value=False):
         return default_value
 
 
-# Whether or not to enable langchain debugging
-DEBUG = get_boolean_env_var("DEBUG", False)
-# Set DEBUG env var to "true" if you wish to enable LC debugging module
-if DEBUG:
-    import langchain
-
-    langchain.debug = True
-
-
-# Embedding model
-EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-base-en-v1.5")
-
-
-# OpenSearch Connection Information
-OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST", "localhost")
-OPENSEARCH_PORT = int(os.getenv("OPENSEARCH_PORT", 9200))
-OPENSEARCH_INITIAL_ADMIN_PASSWORD = os.getenv("OPENSEARCH_INITIAL_ADMIN_PASSWORD", "strongOpea0!)
-
-
 def format_opensearch_conn_from_env():
     opensearch_url = os.getenv("OPENSEARCH_URL", None)
     if opensearch_url:
@@ -64,8 +53,9 @@ OPENSEARCH_URL = format_opensearch_conn_from_env()
 
 # Vector Index Configuration
 INDEX_NAME = os.getenv("INDEX_NAME", "rag-opensearch")
+KEY_INDEX_NAME = os.getenv("KEY_INDEX_NAME", "file-keys")
 
+TIMEOUT_SECONDS = int(os.getenv("TIMEOUT_SECONDS", 600))
 
-current_file_path = os.path.abspath(__file__)
-parent_dir = os.path.dirname(current_file_path)
+SEARCH_BATCH_SIZE = int(os.getenv("SEARCH_BATCH_SIZE", 10))
 
