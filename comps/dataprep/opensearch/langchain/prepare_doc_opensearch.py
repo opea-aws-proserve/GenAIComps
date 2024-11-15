@@ -15,8 +15,6 @@ from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_text_splitters import HTMLHeaderTextSplitter
-from redis.commands.search.field import TextField
-from redis.commands.search.indexDefinition import IndexDefinition, IndexType
 
 from comps import CustomLogger, DocPath, opea_microservices, register_microservice
 from comps.dataprep.utils import (
@@ -31,7 +29,7 @@ from comps.dataprep.utils import (
     save_content_to_local_disk,
 )
 
-logger = CustomLogger("prepare_doc_redis")
+logger = CustomLogger("prepare_doc_opensearch")
 logflag = os.getenv("LOGFLAG", False)
 
 upload_folder = "./uploaded_files/"
@@ -59,19 +57,19 @@ def check_index_existence(client, index_name):
     if logflag:
         logger.info(f"[ check index existence ] checking {client}")
     try:
-        exists = client.indices.exists(index_name)
+        exists = client.index_exists(index_name)
+        exists = False if exists is None else exists
         if exists:
             if logflag:
                 logger.info(f"[ check index existence ] index of client exists: {client}")
-            return client.indices.get(index_name)
         else:
             if logflag:
                 logger.info(f"[ check index existence ] index does not exist")
-            return None
+        return exists
     except Exception as e:
         if logflag:
             logger.info(f"[ check index existence ] error checking index for client: {e}")
-        return None
+        return False
 
 
 def create_index(client, index_name: str = KEY_INDEX_NAME):
@@ -83,21 +81,12 @@ def create_index(client, index_name: str = KEY_INDEX_NAME):
                 "properties": {
                     "file_name": {"type": "text"},
                     "key_ids": {"type": "text"},
-                    "vector_field": {
-                        "type": "knn_vector",
-                        "dimension": 1024,
-                        "method": {
-                            "name": "hnsw",
-                            "engine": "nmslib",
-                            "space_type": "l2"
-                        }
-                    }
                 }
             }
         }
 
         # Create the index
-        client.indices.create(index_name, body=index_body)
+        client.client.indices.create(index_name, body=index_body)
 
         if logflag:
             logger.info(f"[ create index ] index {index_name} successfully created")
@@ -111,9 +100,9 @@ def store_by_id(client, key, value):
     if logflag:
         logger.info(f"[ store by id ] storing ids of {key}")
     try:
-        client.index(
+        client.client.index(
             index=KEY_INDEX_NAME,
-            body=value,
+            body={"file_name": f"file:${key}", "key_ids:": value},
             id="file:" + key,
             refresh=True
         )
@@ -130,7 +119,7 @@ def search_by_id(client, doc_id):
     if logflag:
         logger.info(f"[ search by id ] searching docs of {doc_id}")
     try:
-        result = client.get(index=KEY_INDEX_NAME, id=doc_id)
+        result = client.client.get(index=KEY_INDEX_NAME, id=doc_id)
         if result['found']:
             if logflag:
                 logger.info(f"[ search by id ] search success of {doc_id}: {result}")
@@ -146,7 +135,7 @@ def drop_index(client, index_name):
     if logflag:
         logger.info(f"[ drop index ] dropping index {index_name}")
     try:
-        client.indices.delete(index=index_name)
+        client.client.indices.delete(index=index_name)
         if logflag:
             logger.info(f"[ drop index ] index {index_name} deleted")
     except Exception as e:
@@ -158,7 +147,7 @@ def drop_index(client, index_name):
 
 def delete_by_id(client, doc_id):
     try:
-        reponse = client.delete(index=KEY_INDEX_NAME, id=doc_id)
+        reponse = client.client.delete(index=KEY_INDEX_NAME, id=doc_id)
         if reponse['result'] == 'deleted':
             if logflag:
                 logger.info(f"[ delete by id ] delete id success: {doc_id}")
@@ -256,7 +245,7 @@ def ingest_data_to_opensearch(doc_path: DocPath):
 
 def search_all_documents(index_name, offset, search_batch_size):
     try:
-        response = opensearch_client.search(
+        response = opensearch_client.client.search(
             index=index_name,
             body={
                 "query": {
