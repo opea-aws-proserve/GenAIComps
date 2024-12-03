@@ -3,6 +3,7 @@
 
 import json
 import os
+import boto3
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -21,8 +22,8 @@ from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_text_splitters import HTMLHeaderTextSplitter
 
-# from pyspark import SparkConf, SparkContext
 from opensearchpy import OpenSearch, helpers
+from requests_aws4auth import AWS4Auth
 
 from comps import CustomLogger, DocPath, opea_microservices, register_microservice
 from comps.dataprep.utils import (
@@ -48,7 +49,20 @@ if tei_embedding_endpoint:
 else:
     # create embeddings using local embedding model
     embeddings = HuggingFaceBgeEmbeddings(model_name=EMBED_MODEL)
-auth = ("admin", OPENSEARCH_INITIAL_ADMIN_PASSWORD)
+
+oss = os.getenv("OPENSEARCH_SERVERLESS", False)
+print("OSS var: " + oss)
+if oss:
+    service = "aoss"
+    region = os.getenv("AWS_REGION", "us-east-1")
+    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
+    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY_ID", "")
+    credentials = boto3.Session(aws_access_key_id=aws_access_key, aws_secret_access_key=aws_secret_access_key).get_credentials()
+    auth = AWS4Auth(aws_access_key, aws_secret_access_key, region, service, session_token=credentials.token)
+else:
+    auth = ("admin", OPENSEARCH_INITIAL_ADMIN_PASSWORD)
+print("Auth var: ")
+print(auth)
 opensearch_client = OpenSearchVectorSearch(
     opensearch_url=OPENSEARCH_URL,
     index_name=INDEX_NAME,

@@ -28,3 +28,5 @@ sentence_transformers
 shortuuid
 unstructured[all-docs]
 uvicorn
+requests-aws4auth
+boto3
