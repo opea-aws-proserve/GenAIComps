@@ -22,7 +22,7 @@ from langchain_community.vectorstores import OpenSearchVectorSearch
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_text_splitters import HTMLHeaderTextSplitter
 
-from opensearchpy import OpenSearch, helpers
+from opensearchpy import OpenSearch, helpers, AWSV4SignerAuth, RequestsHttpConnection, Urllib3HttpConnection
 from requests_aws4auth import AWS4Auth
 
 from comps import CustomLogger, DocPath, opea_microservices, register_microservice
@@ -50,29 +50,38 @@ else:
     # create embeddings using local embedding model
     embeddings = HuggingFaceBgeEmbeddings(model_name=EMBED_MODEL)
 
-oss = os.getenv("OPENSEARCH_SERVERLESS", False)
-print("OSS var: " + oss)
-if oss:
+oss = os.getenv("OPENSEARCH_SERVERLESS", False).lower() in ('true', 't')
+print("OSS var: " + str(oss))
+print(type(oss))
+print("OSS URL: " + OPENSEARCH_URL)
+if oss is True:
+    print("OSS var evaluated true")
+    verify_certs_bool = True
+    connection_class_val = RequestsHttpConnection
     service = "aoss"
-    region = os.getenv("AWS_REGION", "us-east-1")
-    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID", "")
-    aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY_ID", "")
-    credentials = boto3.Session(aws_access_key_id=aws_access_key, aws_secret_access_key=aws_secret_access_key).get_credentials()
-    auth = AWS4Auth(aws_access_key, aws_secret_access_key, region, service, session_token=credentials.token)
+    region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+    credentials = boto3.Session().get_credentials()
+    auth = AWSV4SignerAuth(credentials, region, service)
 else:
+    print("OSS var evaluated false")
+    verify_certs_bool = False
+    connection_class_val = Urllib3HttpConnection
     auth = ("admin", OPENSEARCH_INITIAL_ADMIN_PASSWORD)
-print("Auth var: ")
-print(auth)
+
+
 opensearch_client = OpenSearchVectorSearch(
     opensearch_url=OPENSEARCH_URL,
     index_name=INDEX_NAME,
     embedding_function=embeddings,
     http_auth=auth,
     use_ssl=True,
-    verify_certs=False,
+    verify_certs=verify_certs_bool,
+    connection_class=connection_class_val,
     ssl_assert_hostname=False,
     ssl_show_warn=False,
+    timeout=300,
 )
+print(opensearch_client)
 
 
 def check_index_existence(client, index_name):
@@ -124,8 +133,7 @@ def store_by_id(client, key, value):
         logger.info(f"[ store by id ] storing ids of {key}")
     try:
         client.client.index(
-            index=KEY_INDEX_NAME, body={"file_name": f"file:${key}", "key_ids:": value}, id="file:" + key, refresh=True
-        )
+            index=KEY_INDEX_NAME, body={"file_name": f"file:${key}", "key_ids:": value})
         if logflag:
             logger.info(f"[ store by id ] store document success. id: file:{key}")
     except Exception as e:
@@ -139,6 +147,7 @@ def search_by_id(client, doc_id):
     if logflag:
         logger.info(f"[ search by id ] searching docs of {doc_id}")
     try:
+        # FIXME : update search method to use native OpenSearch since we don't know the document id
         result = client.client.get(index=KEY_INDEX_NAME, id=doc_id)
         if result["found"]:
             if logflag:

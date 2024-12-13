@@ -51,6 +51,9 @@ services:
       no_proxy: ${no_proxy}
       http_proxy: ${http_proxy}
       https_proxy: ${https_proxy}
+      LOGFLAG: ${LOGFLAG}
+      OPENSEARCH_SERVERLESS: ${OPENSEARCH_SERVERLESS}
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: ${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
       OPENSEARCH_URL: ${OPENSEARCH_URL}
       INDEX_NAME: ${INDEX_NAME}
       TEI_ENDPOINT: ${TEI_ENDPOINT}
