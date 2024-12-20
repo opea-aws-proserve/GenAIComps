@@ -50,20 +50,15 @@ else:
     # create embeddings using local embedding model
     embeddings = HuggingFaceBgeEmbeddings(model_name=EMBED_MODEL)
 
-oss = os.getenv("OPENSEARCH_SERVERLESS", False).lower() in ('true', 't')
-print("OSS var: " + str(oss))
-print(type(oss))
-print("OSS URL: " + OPENSEARCH_URL)
+oss = os.getenv("OPENSEARCH_SERVICE", False).lower() in ('true', 't')
 if oss is True:
-    print("OSS var evaluated true")
     verify_certs_bool = True
     connection_class_val = RequestsHttpConnection
-    service = "aoss"
+    service = os.getenv("OPENSEARCH_SERVICE_TYPE", "es").lower()
     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
     credentials = boto3.Session().get_credentials()
     auth = AWSV4SignerAuth(credentials, region, service)
 else:
-    print("OSS var evaluated false")
     verify_certs_bool = False
     connection_class_val = Urllib3HttpConnection
     auth = ("admin", OPENSEARCH_INITIAL_ADMIN_PASSWORD)
@@ -81,7 +76,6 @@ opensearch_client = OpenSearchVectorSearch(
     ssl_show_warn=False,
     timeout=300,
 )
-print(opensearch_client)
 
 
 def check_index_existence(client, index_name):

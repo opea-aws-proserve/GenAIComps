@@ -1,6 +1,9 @@
 # Dataprep Microservice with OpenSearch
 
-For dataprep microservice for text input, we provide here the `Langchain` framework.
+For dataprep microservice for text input, we provide here the `Langchain` framework. There are multiple integration options:
+1. Integration with OpenSearch open-source container deployment (see docker-compose-dataprep-opensearch.yaml)
+2. Integration with AWS OpenSearch Service (managed deployment)
+3. Integration with AWS OpenSearch Service (serverless)
 
 ## 🚀1. Start Microservice with Python（Option 1）
 
@@ -16,17 +19,52 @@ cd langchain
 pip install -r requirements.txt
 ```
 
-### 1.2 Start OpenSearch Stack Server
+### 1.2 Start OpenSearch
+#### 1.2.1 Start OpenSearch open-source container
 
 Please refer to this [readme](../../vectorstores/opensearch/README.md).
+
+#### 1.2.2 Start AWS OpenSearch Service (managed deployment)
+
+If you do not already have an AWS OpenSearch Service Managed domain or cluster, please create one in the [AWS Management Console](https://us-east-1.console.aws.amazon.com/aos/home?region=us-east-1#opensearch/dashboard)
+
+#### 1.2.3 Start AWS OpenSearch Service (serverless)
+
+If you do not already have an AWS OpenSearch Service serverless collection, please create one in the [AWS Management Console](https://us-east-1.console.aws.amazon.com/aos/home?region=us-east-1#opensearch/collections)
 
 ### 1.3 Setup Environment Variables
 
 ```bash
-export your_ip=$(hostname -I | awk '{print $1}')
-export OPENSEARCH_URL="http://${your_ip}:9200"
 export INDEX_NAME=${your_index_name}
 export PYTHONPATH=${path_to_comps}
+```
+
+#### 1.3.1 OpenSearch open-source environment variables
+
+```bash
+export your_ip=$(hostname -I | awk '{print $1}')
+export OPENSEARCH_URL="http://${your_ip}:9200"
+export OPENSEARCH_SERVICE="False"
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD=${set an admin password for your local OpenSearch collection}
+
+```
+
+#### 1.3.2 AWS OpenSearch Service environment variables (managed deployment)
+
+```bash
+export OPENSEARCH_URL=${your OpenSearch endpoint URL found in the AWS Management Console}
+export OPENSEARCH_SERVICE="True"
+export OPENSEARCH_SERVICE_TYPE="es"
+export AWS_DEFAULT_REGION=${your AWS region the OpenSearch cluster is hosted in}
+```
+
+#### 1.3.3 AWS OpenSearch Service environment variables (serverless)
+
+```bash
+export OPENSEARCH_URL=${your OpenSearch endpoint URL found in the AWS Management Console}
+export OPENSEARCH_SERVICE="True"
+export OPENSEARCH_SERVICE_TYPE="aoss"
+export AWS_DEFAULT_REGION=${your AWS region the OpenSearch cluster is hosted in}
 ```
 
 ### 1.4 Start Embedding Service
@@ -34,7 +72,7 @@ export PYTHONPATH=${path_to_comps}
 First, you need to start a TEI service.
 
 ```bash
-your_port=6006
+your_port=6060
 model="BAAI/bge-base-en-v1.5"
 docker run -p $your_port:80 -v ./data:/data --name tei_server -e http_proxy=$http_proxy -e https_proxy=$https_proxy --pull always ghcr.io/huggingface/text-embeddings-inference:cpu-1.5 --model-id $model
 ```
@@ -74,11 +112,40 @@ Please refer to this [readme](../../vectorstores/opensearch/README.md).
 ### 2.2 Setup Environment Variables
 
 ```bash
+export your_ip=$(hostname -I | awk '{print $1}')
 export EMBEDDING_MODEL_ID="BAAI/bge-base-en-v1.5"
-export TEI_ENDPOINT="http://${your_ip}:6006"
+export TEI_ENDPOINT="http://${your_ip}:6060"
 export OPENSEARCH_URL="http://${your_ip}:9200"
 export INDEX_NAME=${your_index_name}
 export HUGGINGFACEHUB_API_TOKEN=${your_hf_api_token}
+```
+
+#### 2.2.1 OpenSearch open-source environment variables
+
+```bash
+export your_ip=$(hostname -I | awk '{print $1}')
+export OPENSEARCH_URL="http://${your_ip}:9200"
+export OPENSEARCH_SERVICE="False"
+export OPENSEARCH_INITIAL_ADMIN_PASSWORD=${set an admin password for your local OpenSearch collection}
+
+```
+
+#### 2.2.2 AWS OpenSearch Service environment variables (managed deployment)
+
+```bash
+export OPENSEARCH_URL=${your OpenSearch endpoint URL found in the AWS Management Console}
+export OPENSEARCH_SERVICE="True"
+export OPENSEARCH_SERVICE_TYPE="es"
+export AWS_DEFAULT_REGION=${your AWS region the OpenSearch cluster is hosted in}
+```
+
+#### 2.2.3 AWS OpenSearch Service environment variables (serverless)
+
+```bash
+export OPENSEARCH_URL=${your OpenSearch endpoint URL found in the AWS Management Console}
+export OPENSEARCH_SERVICE="True"
+export OPENSEARCH_SERVICE_TYPE="aoss"
+export AWS_DEFAULT_REGION=${your AWS region the OpenSearch cluster is hosted in}
 ```
 
 ### 2.3 Build Docker Image
@@ -122,6 +189,8 @@ docker container logs -f dataprep-opensearch-server
 Once document preparation microservice for OpenSearch is started, user can use below command to invoke the microservice to convert the document to embedding and save to the database.
 
 Make sure the file path after `files=@` is correct.
+
+In addition, make sure to pass in the following flag to each curl command if you're using the `OpenSearch open-source` deployment method for OpenSearch: `-ku admin:${OPENSEARCH_INITIAL_ADMIN_PASSWORD}`
 
 - Single file upload
 
