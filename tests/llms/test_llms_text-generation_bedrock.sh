@@ -24,7 +24,7 @@ function build_docker_images() {
 
 function start_service() {
     # Check for required AWS credentials
-    if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+    if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ] || [ -z "$AWS_SESSION_TOKEN" ]; then
         echo "AWS credentials not set in environment"
         exit 1
     fi
@@ -36,6 +36,7 @@ function start_service() {
         -e https_proxy=$https_proxy \
         -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
         -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+        -e AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
         opea/bedrock:latest
 
     # Give the service time to start
